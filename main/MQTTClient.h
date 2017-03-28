@@ -483,7 +483,9 @@ int MQTT::Client<Network, Timer, a, MAX_MESSAGE_HANDLERS>::deliverMessage(MQTTSt
             if (messageHandlers[i].fp.attached())
             {
                 MessageData md(topicName, message);
+
                 messageHandlers[i].fp(md);
+
                 rc = SUCCESS;
             }
         }
@@ -544,12 +546,13 @@ int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, b>::cycle(Timer& timer)
             break;
         case PUBLISH:
 		{
-            MQTTString topicName = MQTTString_initializer;
+            MQTTString topicName = MQTTString_initializer;//{NULL,{0,NULL}}
             Message msg;
             int intQoS;
             if (MQTTDeserialize_publish((unsigned char*)&msg.dup, &intQoS, (unsigned char*)&msg.retained, (unsigned short*)&msg.id, &topicName,
                                  (unsigned char**)&msg.payload, (int*)&msg.payloadlen, readbuf, MAX_MQTT_PACKET_SIZE) != 1)
-                goto exit;
+
+            	goto exit;
             msg.qos = (enum QoS)intQoS;
 #if MQTTCLIENT_QOS2
             if (msg.qos != QOS2)

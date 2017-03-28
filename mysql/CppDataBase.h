@@ -22,7 +22,7 @@ public:
     bool ExecuteSql(const char* chSql);
     MYSQL_RES * OpenRecordset(const char* chSql);
     void FreeResult(MYSQL_RES *result);
-
+    bool Open();
 private:
     MYSQL mysql;
     bool bOpen;
@@ -33,7 +33,7 @@ private:
 
 
 protected:
-    bool Open();
+  //  bool Open();
     void Close();
     bool GetConState();
 };

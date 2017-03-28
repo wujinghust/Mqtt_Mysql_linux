@@ -5,6 +5,9 @@
  *      Author: wujing
  */
 #include"CppDataBase.h"
+#include"iostream"
+
+using namespace std;
 
 CppDataBase::CppDataBase(const char *host, const char *user, const char *passwd, const char *db) {
     this->host = host;
@@ -13,8 +16,10 @@ CppDataBase::CppDataBase(const char *host, const char *user, const char *passwd,
     this->db = db;
 
     this->bOpen = false;
-    Open();
+    //Open();
 }
+
+
 
 CppDataBase::~CppDataBase() {
     Close();
@@ -49,7 +54,7 @@ bool CppDataBase::ExecuteSql(const char* chSql) {
     if (!GetConState())
         return false;
 
-    if (mysql_real_query(&mysql, chSql, strlen(chSql)) == 0)
+    if (mysql_real_query(&mysql, chSql, strlen(chSql)+1) == 0)
         return true;
 }
 

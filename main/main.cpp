@@ -20,6 +20,7 @@
 #include "../MQTTPacket/MQTTPacket.h"
 //#include "FP.cpp"
 #include "../mysql/CppDataBase.h"
+//#include "unistd.h"
 
 #define DEFAULT_STACK_SIZE -1
 
@@ -202,27 +203,46 @@ private:
 
 int arrivedcount = 0;
 
+CppDataBase *db = new CppDataBase("127.0.0.1","root","1","sample0327");  //构造对象
+
 void messageArrived(MQTT::MessageData& md)
 {
     MQTT::Message &message = md.message;
+    MQTTString &topicname=md.topicName;
+    char command[100];
+    sprintf(command,"insert into MQTT values(%d,'%s',%d,'%s')",arrivedcount,topicname.lenstring.data,message.qos,(char*)message.payload);
+    cout<<"command: "<<command<<endl;
+    //插入一个数据
+    if(db-> ExecuteSql(command))
+    	cout<<"Insert data sucessfully"<<endl;
+    else
+    	cout<<"Insert data failed"<<endl;
 
+    printf("Message topic %s\n",topicname.lenstring.data);
 	printf("Message %d arrived: qos %d, retained %d, dup %d, packetid %d\n", 
 		++arrivedcount, message.qos, message.retained, message.dup, message.id);
     printf("Payload %.*s\n", message.payloadlen, (char*)message.payload);
 }
 
-
 int main(int argc, char* argv[])
 {   
     IPStack ipstack = IPStack();
     float version = 0.3;
-    const char* topic = "mbed-sample";
+    //const char* topic = "mbed-sample";
     
+    //struct MysqlDatabase database=MysqlDatabase("127.0.0.1","root","1","sample0327");
+    //CppDataBase *db = new CppDataBase(database);  //构造对象
+    //查询数据
+    //MYSQL_RES *res = NULL;
+    //MYSQL_ROW row;
+
+    //创建一个张
+        //db-> ExecuteSql("create   table   tt1(id   int   ,name   varchar(20)) ");
     printf("Version is %f\n", version);
               
     MQTT::Client<IPStack, Countdown> client = MQTT::Client<IPStack, Countdown>(ipstack);
     
-    const char* hostname = "m2m.eclipse.org";  //"192.168.23.4";
+    const char* hostname = "119.23.18.191";  //"m2m.eclipse.org"
     int port = 1883;
 
     if (argc > 1)
@@ -239,16 +259,17 @@ int main(int argc, char* argv[])
 	printf("MQTT connecting\n");
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;       
     data.MQTTVersion = 3;
-    data.clientID.cstring = (char*)"mbed-icraggs";
+    data.clientID.cstring = (char*)"mbed-icraggs-b";
 
     //data.keepAliveInterval=30;    //后来添加，改变心跳时间为30
-
 
     rc = client.connect(data);
 	if (rc != 0)
 	    printf("rc from MQTT connect is %d\n", rc);
 	printf("MQTT connected\n");
-    
+
+    db->Open();  //log on mysql
+
     rc = client.subscribe("mbed-sample", MQTT::QOS2, messageArrived);
     if (rc != 0)
         printf("rc from MQTT subscribe is %d\n", rc);
@@ -258,41 +279,55 @@ int main(int argc, char* argv[])
 
     MQTT::Message message;
 
+    client.yield(1000);   //clcle 1s to receive message from server
+
     // QoS 0
-    char buf[100];
-    sprintf(buf, "Hello World!  QoS 0 message from app version %f", version);
+    char buf[20];
+    sprintf(buf, "Hello World!");
     message.qos = MQTT::QOS0;
     message.retained = true;//false;
     message.dup = false;
     message.payload = (void*)buf;
     message.payloadlen = strlen(buf)+1;
-    rc = client.publish(topic, message);
+    rc = client.publish("mbed-sample", message);
     while (arrivedcount == 0)
         client.yield(100);
         
     // QoS 1
-	printf("Now QoS 1\n");
-    sprintf(buf, "Hello World!  QoS 1 message from app version %f", version);
+	//printf("Now QoS 1\n");
+    sprintf(buf, "Hello Hust!");
     message.qos = MQTT::QOS1;
     message.payloadlen = strlen(buf)+1;
-    rc = client.publish(topic, message);
+    rc = client.publish("mbed-sample", message);
     while (arrivedcount == 1)
         client.yield(100);
         
     // QoS 2
-    sprintf(buf, "Hello World!  QoS 2 message from app version %f", version);
+    sprintf(buf, "Hello MQTT!");
     message.qos = MQTT::QOS2;
     message.payloadlen = strlen(buf)+1;
-    rc = client.publish(topic, message);
+    rc = client.publish("mbed-sample-b", message);
     while (arrivedcount == 2)
         client.yield(100);
     
+    sprintf(buf, "Hello WuJing!");
+    message.qos = MQTT::QOS2;
+    message.payloadlen = strlen(buf)+1;
+    rc = client.publish("mbed-sample-b", message);
+    while (arrivedcount == 3)
+        client.yield(100);
     while(true)   //add on Feb 13
     {
     	client.yield(100);
     }
 
-    rc = client.unsubscribe(topic);
+    delete db;
+    db=NULL;
+
+    rc = client.unsubscribe("mbed-sample");
+    if (rc != 0)
+        printf("rc from unsubscribe was %d\n", rc);
+    rc = client.unsubscribe("mbed-sample-b");
     if (rc != 0)
         printf("rc from unsubscribe was %d\n", rc);
     
